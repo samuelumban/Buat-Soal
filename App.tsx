@@ -93,6 +93,18 @@ function createQuiz() {
   // Collect Email
   form.setCollectEmail(true);
 
+  // --- Identitas Responden ---
+  var nameItem = form.addTextItem();
+  nameItem.setTitle('Nama Lengkap');
+  nameItem.setRequired(true);
+
+  var classItem = form.addTextItem();
+  classItem.setTitle('Kelas');
+  classItem.setRequired(true);
+
+  form.addPageBreakItem().setTitle('Soal Ujian');
+  // ---------------------------
+
   // Questions
   ${questions.map((q, i) => {
     let qScript = `
@@ -228,7 +240,7 @@ function createQuiz() {
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-900 transition-colors font-medium shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-800 transition-colors font-medium shadow-sm"
                 >
                   <Download size={18} /> Cetak / PDF
                 </button>
@@ -279,7 +291,7 @@ function createQuiz() {
 
         {/* Google Forms Modal */}
         {showFormModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-950/60 p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full flex flex-col max-h-[90vh]">
               <div className="p-6 border-b border-slate-200 flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -305,8 +317,8 @@ function createQuiz() {
                   <li>Link Google Form Anda akan muncul di bagian bawah log (Execution Log).</li>
                 </ol>
                 <div className="relative">
-                  {/* Code block with Dark Blue background */}
-                  <pre className="bg-indigo-950 text-white p-4 rounded-lg text-xs overflow-x-auto h-64 font-mono border border-indigo-900">
+                  {/* Code block with Blue background */}
+                  <pre className="bg-blue-900 text-white p-4 rounded-lg text-xs overflow-x-auto h-64 font-mono border border-blue-800">
                     {generateAppsScript()}
                   </pre>
                   <button 
