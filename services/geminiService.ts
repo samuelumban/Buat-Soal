@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { ExamConfig, Question, ExamType } from "../types";
 
@@ -13,14 +14,14 @@ const questionSchema: Schema = {
         type: Type.OBJECT,
         properties: {
           id: { type: Type.INTEGER },
-          type: { type: Type.STRING, enum: ["mcq", "essay"] },
+          type: { type: Type.STRING },
           taxonomy: { type: Type.STRING },
           difficulty: { type: Type.STRING },
           question_text: { type: Type.STRING },
           options: {
             type: Type.ARRAY,
             items: { type: Type.STRING },
-            description: "Array of 5 options string if mcq. Empty if essay."
+            description: "Options for MCQ (a-e), or True/False choices, or Matching pairs if applicable."
           },
           correct_answer: { type: Type.STRING },
           explanation: { type: Type.STRING },
@@ -38,27 +39,40 @@ const questionSchema: Schema = {
 export const generateExamQuestions = async (config: ExamConfig): Promise<Question[]> => {
   const ai = getAI();
   
-  let questionTypeInstruction = "Variasi Soal: Campuran Pilihan Ganda (opsi a-e) dan Esai.";
-  if (config.examType === ExamType.MCQ) {
-    questionTypeInstruction = "Format Soal: SEMUA harus Pilihan Ganda (MCQ) dengan 5 opsi (a-e).";
-  } else if (config.examType === ExamType.ESSAY) {
-    questionTypeInstruction = "Format Soal: SEMUA harus Uraian / Esai (essay). Jangan buat pilihan ganda.";
-  }
-
   const systemPrompt = `
-    Bertindaklah sebagai Guru SMA ahli di Indonesia. Buatlah ujian berdasarkan materi yang diberikan.
+    Bertindaklah sebagai Guru SMA ahli di Indonesia yang ahli dalam kurikulum merdeka. Buatlah ujian/asesmen berdasarkan materi.
     
     Konfigurasi Ujian:
     - Mata Pelajaran: ${config.subject}
     - Jenjang: ${config.gradeLevel}
     - Jumlah Soal: ${config.count}
     - Tingkat Kesulitan: ${config.difficulty}
-    - Taksonomi Bloom: ${config.bloomLevels.join(', ')}
-    - ${questionTypeInstruction}
-    - Gambar: ${config.includeImages ? "Beberapa soal HARUS memiliki deskripsi gambar visual yang relevan (image_description) untuk digenerate AI." : "Jangan sertakan deskripsi gambar."}
+    - Taksonomi Bloom (TARGET KOGNITIF): ${config.bloomLevels.join(', ')}
+    - TIPE SOAL YANG DIMINTA: ${config.examType}
     
-    Output JSON dengan format:
-    questions: Array of objects.
+    Kurikulum Alignment (SANGAT PENTING):
+    - Capaian Pembelajaran (CP): ${config.cp || "Sesuaikan dengan materi"}
+    - Tujuan Pembelajaran (TP): ${config.tp || "Sesuaikan dengan materi"}
+    
+    Instruksi Khusus (FORMAT JSON):
+    1. Pastikan setiap soal MENGACU PADA CP dan TP.
+    2. Level Kognitif harus sesuai Bloom (${config.bloomLevels.join(', ')}).
+    
+    3. ATURAN TIPE SOAL (CRITICAL):
+       - Jika Tipe Soal adalah 'Pilihan Ganda', set JSON field "type" menjadi "mcq".
+       - Jika Tipe Soal adalah 'Uraian' atau 'Esai', set JSON field "type" menjadi "essay".
+       - Jika Tipe Soal adalah 'Benar/Salah', set JSON field "type" menjadi "true_false".
+       - Jika Tipe Soal adalah 'Menjodohkan', set JSON field "type" menjadi "matching".
+       - Jika Tipe Soal adalah 'Isian Singkat', set JSON field "type" menjadi "short_answer".
+    
+    4. ATURAN STRUKTUR SOAL:
+       - Untuk tipe "mcq" (Pilihan Ganda): Field "options" WAJIB ADA dan berisi array 5 pilihan jawaban (a-e).
+       - Field "correct_answer": Harus berisi teks jawaban yang benar.
+       - Field "explanation": Berikan pembahasan lengkap.
+
+    Gambar: ${config.includeImages ? "Beberapa soal HARUS memiliki deskripsi gambar visual yang relevan (image_description)." : "Jangan sertakan deskripsi gambar."}
+    
+    Output JSON dengan format: questions: Array of objects.
   `;
 
   // Construct parts based on input type (Text or File)
@@ -101,10 +115,14 @@ export const generateExamQuestions = async (config: ExamConfig): Promise<Questio
 export const generateQuestionImage = async (prompt: string): Promise<string | undefined> => {
   const ai = getAI();
   try {
+    // New style based on user request: Flat minimal illustration, muted earth tones, thin outlines.
+    // We combine the context (prompt) with the requested aesthetic style.
+    const stylePrompt = `${prompt}. Style: Flat minimal illustration, muted earth tones, thin outlines, simple shading, calm mood, minimalistic composition. Negative prompt: No realism, no 3D look, no dramatic lighting, no heavy shadows, no saturated colors, no complex background, no detailed textures, no comic style, no anime, no harsh outlines, no clutter, NO Text.`;
+    
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash-image", 
       contents: {
-        parts: [{ text: `Generate an educational illustration: ${prompt}` }]
+        parts: [{ text: `Generate an educational illustration: ${stylePrompt}` }]
       }
     });
 
@@ -139,7 +157,8 @@ export const editImageWithGemini = async (base64Image: string, editInstruction: 
             }
           },
           {
-            text: `Edit this image: ${editInstruction}. Return the edited image.`
+            // Apply the same consistent style for edits
+            text: `Edit this image: ${editInstruction}. Return the edited image with style: Flat minimal illustration, muted earth tones, thin outlines, simple shading, calm mood, minimalistic composition. NO Text.`
           }
         ]
       }

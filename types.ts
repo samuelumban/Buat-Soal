@@ -1,12 +1,23 @@
+
 export enum QuestionType {
   MULTIPLE_CHOICE = 'Pilihan Ganda',
   ESSAY = 'Esai'
 }
 
 export enum ExamType {
-  MCQ = 'Pilihan Ganda (Semua)',
-  ESSAY = 'Uraian / Esai (Semua)',
-  MIXED = 'Campuran (PG & Esai)'
+  MCQ = 'Pilihan Ganda',
+  TRUE_FALSE = 'Benar/Salah',
+  MATCHING = 'Menjodohkan',
+  SHORT_ANSWER = 'Isian Singkat',
+  ESSAY = 'Uraian',
+  CASE_STUDY = 'Studi Kasus',
+  PRACTICAL = 'Praktik/Unjuk Kerja',
+  PORTFOLIO = 'Portofolio',
+  PROJECT = 'Project-based Assessment',
+  ORAL = 'Penilaian Lisan',
+  HOTS = 'Soal HOTS',
+  MULTIMEDIA = 'Soal Berbasis Multimedia',
+  MIXED = 'Campuran (Acak)'
 }
 
 export enum BloomLevel {
@@ -26,28 +37,30 @@ export enum Difficulty {
 
 export interface Question {
   id: number;
-  type: 'mcq' | 'essay';
+  type: string; // Changed from literal union to string to accommodate flexible types
   taxonomy: string;
   difficulty: string;
   question_text: string;
-  options?: string[]; // For MCQ, should be 5 options (a-e)
+  options?: string[]; // Used for MCQ, True/False, or Matching pairs
   correct_answer: string;
   explanation: string;
-  image_description?: string; // If the AI suggests an image
-  image_url?: string; // The generated base64 image
+  image_description?: string; 
+  image_url?: string; 
 }
 
 export interface ExamConfig {
   subject: string;
-  gradeLevel: string; // e.g., "Kelas 10 SMA"
+  gradeLevel: string;
   count: number;
   difficulty: Difficulty;
-  examType: ExamType; // Added field
-  bloomLevels: string[]; // Selected bloom levels
+  examType: ExamType; 
+  bloomLevels: string[]; 
   includeImages: boolean;
   contextText: string;
+  cp: string; // Capaian Pembelajaran
+  tp: string; // Tujuan Pembelajaran
   fileData?: {
     mimeType: string;
-    data: string; // base64
+    data: string; 
   };
 }

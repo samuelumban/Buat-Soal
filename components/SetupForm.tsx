@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { ExamConfig, Difficulty, BloomLevel, ExamType } from '../types';
-import { Upload, FileText, Check, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Check, AlertCircle, Target, Book } from 'lucide-react';
 
 interface SetupFormProps {
   onGenerate: (config: ExamConfig) => void;
@@ -12,10 +13,12 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
   const [gradeLevel, setGradeLevel] = useState('Kelas 10 SMA');
   const [count, setCount] = useState(10);
   const [difficulty, setDifficulty] = useState<Difficulty>(Difficulty.MEDIUM);
-  const [examType, setExamType] = useState<ExamType>(ExamType.MIXED);
+  const [examType, setExamType] = useState<ExamType>(ExamType.MCQ);
   const [selectedBlooms, setSelectedBlooms] = useState<string[]>([BloomLevel.C1, BloomLevel.C2, BloomLevel.C3]);
   const [includeImages, setIncludeImages] = useState(false);
   const [contextText, setContextText] = useState('');
+  const [cp, setCp] = useState(''); // Capaian Pembelajaran
+  const [tp, setTp] = useState(''); // Tujuan Pembelajaran
   const [fileData, setFileData] = useState<{ mimeType: string, data: string } | undefined>(undefined);
   const [fileName, setFileName] = useState<string | null>(null);
 
@@ -71,6 +74,8 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
       bloomLevels: selectedBlooms,
       includeImages,
       contextText,
+      cp,
+      tp,
       fileData
     });
   };
@@ -79,14 +84,15 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-slate-100">
       <div className="mb-8 text-center">
         <h2 className="text-2xl font-bold text-slate-800">Konfigurasi Soal</h2>
-        <p className="text-slate-500">Sesuaikan parameter untuk generate soal otomatis</p>
+        <p className="text-slate-500">Sesuaikan parameter, CP, dan TP untuk generate soal otomatis</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Material Upload Section */}
         <div className="space-y-4">
           <label className="block text-sm font-semibold text-slate-700">1. Materi / Bahan Ajar</label>
-          <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:bg-slate-50 transition-colors relative">
+          {/* File Upload Box - Dark Theme */}
+          <div className="border-2 border-dashed border-slate-600 bg-slate-800 rounded-xl p-6 text-center hover:bg-slate-700 transition-colors relative">
             <input 
               type="file" 
               accept=".txt,.md,.csv,.pdf" 
@@ -94,24 +100,25 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
             />
             <div className="flex flex-col items-center gap-2 pointer-events-none">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-slate-700 text-blue-400 rounded-full flex items-center justify-center">
                 <Upload size={24} />
               </div>
               {fileName ? (
-                <div className="flex items-center gap-2 text-green-600 font-medium">
+                <div className="flex items-center gap-2 text-green-400 font-medium">
                   <Check size={16} /> {fileName}
                 </div>
               ) : (
                 <>
-                  <p className="text-slate-700 font-medium">Klik untuk upload file (PDF, TXT)</p>
+                  <p className="text-slate-200 font-medium">Klik untuk upload file (PDF, TXT)</p>
                   <p className="text-xs text-slate-400">atau paste teks di bawah ini</p>
                 </>
               )}
             </div>
           </div>
+          {/* Context Text Area - Dark Theme */}
           <textarea
             placeholder="Atau tempel materi pelajaran di sini..."
-            className="w-full h-32 p-4 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm"
+            className="w-full h-32 p-4 rounded-lg border border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-800 text-white placeholder-slate-400"
             value={contextText}
             onChange={(e) => setContextText(e.target.value)}
             disabled={!!fileData} // Disable text area if a file (PDF) is loaded
@@ -125,12 +132,13 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
             <label className="block text-sm font-semibold text-slate-700">2. Detail Pelajaran</label>
             <div>
               <span className="text-xs text-slate-500 mb-1 block">Mata Pelajaran</span>
+              {/* Subject Input - Dark Theme */}
               <input
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Contoh: Biologi - Sel Hewan"
-                className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                className="w-full p-2.5 rounded-lg border border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-800 text-white placeholder-slate-400"
               />
             </div>
             <div>
@@ -167,7 +175,7 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
              <label className="block text-sm font-semibold text-slate-700">3. Parameter Soal</label>
              <div className="space-y-3">
                 <div>
-                   <span className="text-xs text-slate-500 mb-1 block">Tipe Soal</span>
+                   <span className="text-xs text-slate-500 mb-1 block">Tipe Soal (Assessment)</span>
                    <select
                       value={examType}
                       onChange={(e) => setExamType(e.target.value as ExamType)}
@@ -193,13 +201,14 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
                   </div>
                   <div>
                     <span className="text-xs text-slate-500 mb-1 block">Jumlah Soal (1-50)</span>
+                    {/* Count Input - Dark Theme */}
                     <input
                       type="number"
                       min="1"
                       max="50"
                       value={count}
                       onChange={(e) => setCount(Number(e.target.value))}
-                      className="w-full p-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full p-2.5 rounded-lg border border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none bg-slate-800 text-white placeholder-slate-400"
                     />
                   </div>
                 </div>
@@ -219,9 +228,40 @@ const SetupForm: React.FC<SetupFormProps> = ({ onGenerate, isLoading }) => {
           </div>
         </div>
 
+        {/* CP & TP Section */}
+        <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+           <label className="block text-sm font-semibold text-slate-700 flex items-center gap-2">
+             <Target size={18} className="text-indigo-600"/>
+             4. Kurikulum (CP & TP)
+           </label>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             <div>
+                <span className="text-xs text-slate-500 mb-1 block">Capaian Pembelajaran (CP)</span>
+                {/* CP Input - Dark Theme (Already Applied) */}
+                <textarea
+                  value={cp}
+                  onChange={(e) => setCp(e.target.value)}
+                  placeholder="Paste Capaian Pembelajaran di sini..."
+                  className="w-full p-3 rounded-lg border border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none h-24 text-sm bg-slate-800 text-white placeholder-slate-400"
+                />
+             </div>
+             <div>
+                <span className="text-xs text-slate-500 mb-1 block">Tujuan Pembelajaran (TP)</span>
+                {/* TP Input - Dark Theme (Already Applied) */}
+                <textarea
+                  value={tp}
+                  onChange={(e) => setTp(e.target.value)}
+                  placeholder="Paste Tujuan Pembelajaran di sini..."
+                  className="w-full p-3 rounded-lg border border-slate-600 focus:ring-2 focus:ring-blue-500 outline-none h-24 text-sm bg-slate-800 text-white placeholder-slate-400"
+                />
+             </div>
+           </div>
+        </div>
+
         {/* Bloom's Taxonomy */}
         <div className="space-y-3">
-          <label className="block text-sm font-semibold text-slate-700">4. Taksonomi Bloom (Pilih yang diinginkan)</label>
+          <label className="block text-sm font-semibold text-slate-700">5. Taksonomi Bloom (Pilih yang diinginkan)</label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {Object.values(BloomLevel).map((level) => {
               const isSelected = selectedBlooms.includes(level);

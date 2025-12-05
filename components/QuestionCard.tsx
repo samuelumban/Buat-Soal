@@ -1,7 +1,8 @@
+
 import React, { useState } from 'react';
 import { Question } from '../types';
 import { generateQuestionImage, editImageWithGemini } from '../services/geminiService';
-import { Loader2, Image as ImageIcon, Wand2, Edit, Save, X } from 'lucide-react';
+import { Loader2, Wand2, Edit, Save, X, Download, ImageIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface QuestionCardProps {
@@ -20,6 +21,9 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, index, showAnswer
   
   // State for text editing
   const [editedQ, setEditedQ] = useState(question);
+
+  // Helper to determine if question is MCQ broadly
+  const isMcq = ['mcq', 'pilihan ganda', 'multiple choice'].some(t => question.type.toLowerCase().includes(t));
 
   const handleGenerateImage = async () => {
     if (!question.image_description) return;
@@ -55,6 +59,17 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, index, showAnswer
     }
   };
 
+  const handleDownloadImage = () => {
+    if (question.image_url) {
+      const a = document.createElement('a');
+      a.href = question.image_url;
+      a.download = `soal_${index + 1}_image.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  };
+
   const saveTextChanges = () => {
     onUpdateQuestion(editedQ);
     setIsEditingText(false);
@@ -76,12 +91,12 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, index, showAnswer
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6 transition-all hover:shadow-md relative group/card">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center gap-2">
-          <span className="bg-blue-600 text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full">
+          <span className="bg-slate-800 text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full">
             {index + 1}
           </span>
           <div className="flex flex-col">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              {question.type === 'mcq' ? 'Pilihan Ganda' : 'Esai'} • {question.taxonomy} • {question.difficulty}
+              {isMcq ? 'Pilihan Ganda' : 'Esai'} • {question.taxonomy} • {question.difficulty}
             </span>
           </div>
         </div>
@@ -98,137 +113,154 @@ const QuestionCard: React.FC<QuestionCardProps> = ({ question, index, showAnswer
         )}
       </div>
 
-      {isEditingText ? (
-        <div className="mb-4 space-y-3">
-          <div className="space-y-1">
-             <label className="text-xs font-semibold text-slate-500">Soal:</label>
-             <textarea 
-               className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800"
-               rows={3}
-               value={editedQ.question_text}
-               onChange={(e) => setEditedQ({ ...editedQ, question_text: e.target.value })}
-             />
-          </div>
-        </div>
-      ) : (
-        <div className="mb-4 text-slate-800 text-lg leading-relaxed">
-          <ReactMarkdown>{question.question_text}</ReactMarkdown>
-        </div>
-      )}
-
-      {/* Image Section */}
-      {(question.image_description || question.image_url) && (
-        <div className="mb-6 bg-slate-50 p-4 rounded-lg border border-slate-100">
-          {question.image_url ? (
-            <div className="relative group">
-              <img 
-                src={question.image_url} 
-                alt="Question Illustration" 
-                className="max-w-full h-auto max-h-96 rounded-md shadow-sm mx-auto"
-              />
-              <button 
-                onClick={() => setShowEditModal(true)}
-                className="absolute top-2 right-2 bg-white/90 text-slate-700 p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-50 text-xs font-medium flex items-center gap-1"
-              >
-                <Edit size={14} /> Edit Gambar
-              </button>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500 italic flex-1 mr-4">
-                <span className="font-semibold not-italic text-slate-700 block mb-1">Saran Visual AI:</span>
-                "{question.image_description}"
-              </div>
-              <button
-                onClick={handleGenerateImage}
-                disabled={isGeneratingImg}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors text-sm font-medium disabled:opacity-50"
-              >
-                {isGeneratingImg ? <Loader2 className="animate-spin" size={16} /> : <Wand2 size={16} />}
-                Generate Gambar
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Options for MCQ */}
-      {question.type === 'mcq' && question.options && (
-        <div className="space-y-2 ml-2">
-          {question.options.map((opt, idx) => {
-            const label = String.fromCharCode(65 + idx); // A, B, C...
-            const isCorrect = showAnswer && opt.startsWith(question.correct_answer) || (showAnswer && label === question.correct_answer);
-            
-            if (isEditingText && editedQ.options) {
-               return (
-                 <div key={idx} className="flex gap-2 items-center">
-                    <span className="font-bold w-6 text-slate-500">{label}.</span>
-                    <input 
-                      type="text" 
-                      value={editedQ.options[idx]} 
-                      onChange={(e) => handleOptionChange(idx, e.target.value)}
-                      className="flex-1 p-2 border border-slate-300 rounded-md text-sm"
-                    />
-                 </div>
-               )
-            }
-
-            return (
-              <div key={idx} className={`flex gap-3 p-3 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-transparent border-transparent hover:bg-slate-50'}`}>
-                <span className={`font-bold w-6 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>{label}.</span>
-                <span className={`${isCorrect ? 'text-green-800 font-medium' : 'text-slate-700'}`}>{opt}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Answer Key Section (Editable) */}
-      {(showAnswer || isEditingText) && (
-        <div className="mt-6 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
-          <h4 className="text-sm font-bold text-slate-900 mb-2">Kunci Jawaban & Pembahasan:</h4>
-          
+      <div className="flex flex-col md:flex-row gap-6">
+        {/* Left Column: Question Text & Options */}
+        <div className="flex-1 order-2 md:order-1">
           {isEditingText ? (
-            <div className="space-y-3">
-               <div>
-                  <label className="text-xs text-slate-500 block mb-1">Jawaban Benar:</label>
-                  <input 
-                    type="text"
-                    value={editedQ.correct_answer}
-                    onChange={(e) => setEditedQ({ ...editedQ, correct_answer: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                  />
-               </div>
-               <div>
-                  <label className="text-xs text-slate-500 block mb-1">Pembahasan:</label>
-                  <textarea
-                    value={editedQ.explanation}
-                    onChange={(e) => setEditedQ({ ...editedQ, explanation: e.target.value })}
-                    className="w-full p-2 border border-slate-300 rounded-md text-sm"
-                    rows={2}
-                  />
-               </div>
-               <div className="flex justify-end gap-2 mt-2">
-                 <button onClick={cancelTextChanges} className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded">
-                   <X size={14}/> Batal
-                 </button>
-                 <button onClick={saveTextChanges} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white hover:bg-green-700 rounded">
-                   <Save size={14}/> Simpan
-                 </button>
-               </div>
+            <div className="mb-4 space-y-3">
+              <div className="space-y-1">
+                 <label className="text-xs font-semibold text-slate-500">Soal:</label>
+                 <textarea 
+                   className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-slate-800"
+                   rows={3}
+                   value={editedQ.question_text}
+                   onChange={(e) => setEditedQ({ ...editedQ, question_text: e.target.value })}
+                 />
+              </div>
             </div>
           ) : (
-            <>
-              <p className="text-slate-700 mb-2">
-                <span className="font-semibold text-green-600">Jawaban: {question.correct_answer}</span>
-              </p>
-              <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
-                {question.explanation}
-              </div>
-            </>
+            <div className="mb-4 text-slate-800 text-lg leading-relaxed">
+              <ReactMarkdown>{question.question_text}</ReactMarkdown>
+            </div>
+          )}
+
+          {/* Options for MCQ */}
+          {isMcq && question.options && (
+            <div className="space-y-2 ml-2">
+              {question.options.map((opt, idx) => {
+                const label = String.fromCharCode(65 + idx); // A, B, C...
+                const isCorrect = showAnswer && opt.startsWith(question.correct_answer) || (showAnswer && label === question.correct_answer);
+                
+                if (isEditingText && editedQ.options) {
+                   return (
+                     <div key={idx} className="flex gap-2 items-center">
+                        <span className="font-bold w-6 text-slate-500">{label}.</span>
+                        <input 
+                          type="text" 
+                          value={editedQ.options[idx]} 
+                          onChange={(e) => handleOptionChange(idx, e.target.value)}
+                          className="flex-1 p-2 border border-slate-300 rounded-md text-sm"
+                        />
+                     </div>
+                   )
+                }
+
+                return (
+                  <div key={idx} className={`flex gap-3 p-3 rounded-lg border ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-transparent border-transparent hover:bg-slate-50'}`}>
+                    <span className={`font-bold w-6 ${isCorrect ? 'text-green-700' : 'text-slate-500'}`}>{label}.</span>
+                    <span className={`${isCorrect ? 'text-green-800 font-medium' : 'text-slate-700'}`}>{opt}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Answer Key Section (Editable) */}
+          {(showAnswer || isEditingText) && (
+            <div className="mt-6 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2">
+              <h4 className="text-sm font-bold text-slate-900 mb-2">Kunci Jawaban & Pembahasan:</h4>
+              
+              {isEditingText ? (
+                <div className="space-y-3">
+                   <div>
+                      <label className="text-xs text-slate-500 block mb-1">Jawaban Benar:</label>
+                      <input 
+                        type="text"
+                        value={editedQ.correct_answer}
+                        onChange={(e) => setEditedQ({ ...editedQ, correct_answer: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                      />
+                   </div>
+                   <div>
+                      <label className="text-xs text-slate-500 block mb-1">Pembahasan:</label>
+                      <textarea
+                        value={editedQ.explanation}
+                        onChange={(e) => setEditedQ({ ...editedQ, explanation: e.target.value })}
+                        className="w-full p-2 border border-slate-300 rounded-md text-sm"
+                        rows={2}
+                      />
+                   </div>
+                   <div className="flex justify-end gap-2 mt-2">
+                     <button onClick={cancelTextChanges} className="flex items-center gap-1 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded">
+                       <X size={14}/> Batal
+                     </button>
+                     <button onClick={saveTextChanges} className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white hover:bg-green-700 rounded">
+                       <Save size={14}/> Simpan
+                     </button>
+                   </div>
+                </div>
+              ) : (
+                <>
+                  <p className="text-slate-700 mb-2">
+                    <span className="font-semibold text-green-600">Jawaban: {question.correct_answer}</span>
+                  </p>
+                  <div className="bg-slate-50 p-3 rounded text-sm text-slate-700 border border-slate-200">
+                    {question.explanation}
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
-      )}
+
+        {/* Right Column: Image Section */}
+        {(question.image_description || question.image_url) && (
+          <div className="md:w-1/3 order-1 md:order-2 flex flex-col gap-2">
+            <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+              {question.image_url ? (
+                <div className="relative group">
+                  <img 
+                    src={question.image_url} 
+                    alt="Question Illustration" 
+                    className="w-full h-auto rounded-md shadow-sm border border-slate-200 bg-white"
+                  />
+                  <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                     <button 
+                      onClick={handleDownloadImage}
+                      className="bg-white/90 text-slate-700 p-2 rounded-full shadow-lg hover:bg-blue-50 text-xs font-medium"
+                      title="Download Gambar"
+                    >
+                      <Download size={14} />
+                    </button>
+                    <button 
+                      onClick={() => setShowEditModal(true)}
+                      className="bg-white/90 text-slate-700 p-2 rounded-full shadow-lg hover:bg-blue-50 text-xs font-medium"
+                      title="Edit Gambar"
+                    >
+                      <Edit size={14} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                   <div className="h-32 bg-slate-100 rounded-md flex items-center justify-center border-2 border-dashed border-slate-300">
+                      <ImageIcon className="text-slate-300" size={32}/>
+                   </div>
+                  {/* Removed prompt text display here */}
+                  <button
+                    onClick={handleGenerateImage}
+                    disabled={isGeneratingImg}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors text-xs font-medium disabled:opacity-50 w-full"
+                  >
+                    {isGeneratingImg ? <Loader2 className="animate-spin" size={14} /> : <Wand2 size={14} />}
+                    Generate Gambar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Edit Image Modal */}
       {showEditModal && (
