@@ -313,7 +313,7 @@ function createQuiz() {
                   <li>Buka <a href="https://script.google.com/home/start" target="_blank" className="text-blue-600 underline hover:text-blue-800">script.google.com</a> dan klik <strong>+ New Project</strong>.</li>
                   <li>Hapus semua kode yang ada, lalu <strong>Paste</strong> kode di bawah ini.</li>
                   <li>Klik tombol <strong>Run</strong> (ikon Play &#9658;).</li>
-                  <li>Berikan izin akses (Review Permissions -> Allow) jika diminta.</li>
+                  <li>Berikan izin akses (Review Permissions -&gt; Allow) jika diminta.</li>
                   <li>Link Google Form Anda akan muncul di bagian bawah log (Execution Log).</li>
                 </ol>
                 <div className="relative">
