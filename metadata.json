@@ -1,0 +1,5 @@
+{
+  "name": "BUAT SOAL",
+  "description": "Aplikasi generator soal otomatis untuk guru SMA dengan dukungan Taksonomi Bloom, upload materi (PDF/Txt), dan generasi gambar AI.",
+  "requestFramePermissions": []
+}
